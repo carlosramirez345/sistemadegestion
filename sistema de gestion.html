@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Gestión de Vacantes</title>
+  <style>
+    body { font-family: Arial, sans-serif; background: #f4f4f4; margin: 20px; }
+    h1 { text-align: center; }
+    .formulario, .vacantes, .filtros, .reportes {
+      max-width: 700px;
+      margin: 20px auto;
+      background: white;
+      padding: 15px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px #ccc;
+    }
+    .vacante {
+      border: 2px solid #ccc;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 8px;
+    }
+    .vacante.verde { border-color: green; background: #d4f5d4; }
+    .vacante.rojo { border-color: red; background: #f5d4d4; }
+    button {
+      margin: 3px;
+      padding: 5px 10px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    .editar { background: #007bff; color: white; }
+    .aceptar { background: green; color: white; }
+    .rechazar { background: red; color: white; }
+    .boton { background: #007bff; color: white; }
+    select, input {
+      padding: 5px;
+      margin: 5px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    table, th, td {
+      border: 1px solid #ccc;
+      padding: 8px;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Gestión de Vacantes</h1>
+
+<div class="formulario">
+  <h2>Registrar Vacante</h2>
+  <input type="text" id="nombre" placeholder="Nombre"><br><br>
+  <input type="text" id="telefono" placeholder="Teléfono"><br><br>
+  <input type="text" id="sucursal" placeholder="Sucursal (Capu, Crystal, Molinos, 14 Sur)"><br><br>
+  <button class="boton" onclick="agregarVacante()">Agregar</button>
+</div>
+
+
+<div class="filtros">
+  <h2>Filtros</h2>
+  <label>Estado: </label>
+  <select id="filtroEstado" onchange="mostrarVacantes()">
+    <option value="">Todos</option>
+    <option value="aceptado">Aceptados</option>
+    <option value="rechazado">Rechazados</option>
+  </select>
+
+  <label>Sucursal: </label>
+  <select id="filtroSucursal" onchange="mostrarVacantes()">
+    <option value="">Todas</option>
+    <option value="capu">Capu</option>
+    <option value="crystal">Crystal</option>
+    <option value="molinos">Molinos</option>
+    <option value="14 sur">14 Sur</option>
+  </select>
+</div>
+
+<div class="vacantes" id="listaVacantes">
+  <h2>Lista de Vacantes</h2>
+</div>
+
+<div class="reportes">
+  <h2>Reportes</h2>
+  <button class="boton" onclick="mostrarReporte()">Ver Reporte en Tabla</button>
+  <button class="boton" onclick="descargarCSV()">Descargar Excel (CSV)</button>
+  <div id="reporte"></div>
+</div>
+
+<script>
+let vacantes = JSON.parse(localStorage.getItem("vacantes")) || [];
+
+function guardar() {
+  localStorage.setItem("vacantes", JSON.stringify(vacantes));
+}
+
+function mostrarVacantes() {
+  let lista = document.getElementById("listaVacantes");
+  lista.innerHTML = "<h2>Lista de Vacantes</h2>";
+
+  let filtroEstado = document.getElementById("filtroEstado").value.toLowerCase();
+  let filtroSucursal = document.getElementById("filtroSucursal").value.toLowerCase();
+
+  vacantes.forEach((v, i) => {
+    let sucursalLower = v.sucursal.toLowerCase();
+    let estadoLower = v.estado.toLowerCase();
+
+    if ((filtroEstado === "" || estadoLower === filtroEstado) &&
+        (filtroSucursal === "" || sucursalLower === filtroSucursal)) {
+      
+      let div = document.createElement("div");
+      div.className = "vacante " + (v.estado === "aceptado" ? "verde" : v.estado === "rechazado" ? "rojo" : "");
+      div.innerHTML = `
+        <p><strong>Nombre:</strong> ${v.nombre}</p>
+        <p><strong>Teléfono:</strong> ${v.telefono}</p>
+        <p><strong>Sucursal:</strong> ${v.sucursal}</p>
+        <p><strong>Estado:</strong> ${v.estado || "Pendiente"}</p>
+        <button class="editar" onclick="editarVacante(${i})">Editar</button>
+        <button class="aceptar" onclick="cambiarEstado(${i}, 'aceptado')">Aceptar</button>
+        <button class="rechazar" onclick="cambiarEstado(${i}, 'rechazado')">Rechazar</button>
+      `;
+      lista.appendChild(div);
+    }
+  });
+}
+
+function agregarVacante() {
+  let nombre = document.getElementById("nombre").value;
+  let telefono = document.getElementById("telefono").value;
+  let sucursal = document.getElementById("sucursal").value;
+
+  if (nombre && telefono && sucursal) {
+    vacantes.push({nombre, telefono, sucursal, estado: ""});
+    guardar();
+    mostrarVacantes();
+    document.getElementById("nombre").value = "";
+    document.getElementById("telefono").value = "";
+    document.getElementById("sucursal").value = "";
+  } else {
+    alert("Completa todos los campos");
+  }
+}
+
+function editarVacante(i) {
+  let nuevoNombre = prompt("Nuevo nombre:", vacantes[i].nombre);
+  let nuevoTelefono = prompt("Nuevo teléfono:", vacantes[i].telefono);
+  let nuevaSucursal = prompt("Nueva sucursal:", vacantes[i].sucursal);
+  if (nuevoNombre && nuevoTelefono && nuevaSucursal) {
+    vacantes[i].nombre = nuevoNombre;
+    vacantes[i].telefono = nuevoTelefono;
+    vacantes[i].sucursal = nuevaSucursal;
+    guardar();
+    mostrarVacantes();
+  }
+}
+
+function cambiarEstado(i, estado) {
+  vacantes[i].estado = estado;
+  guardar();
+  mostrarVacantes();
+}
+
+function mostrarReporte() {
+  let reporteDiv = document.getElementById("reporte");
+  if (vacantes.length === 0) {
+    reporteDiv.innerHTML = "<p>No hay vacantes registradas.</p>";
+    return;
+  }
+
+  let tabla = `<table>
+    <tr>
+      <th>Nombre</th>
+      <th>Teléfono</th>
+      <th>Sucursal</th>
+      <th>Estado</th>
+    </tr>`;
+
+  vacantes.forEach(v => {
+    tabla += `
+      <tr>
+        <td>${v.nombre}</td>
+        <td>${v.telefono}</td>
+        <td>${v.sucursal}</td>
+        <td>${v.estado || "Pendiente"}</td>
+      </tr>
+    `;
+  });
+
+  tabla += "</table>";
+  reporteDiv.innerHTML = tabla;
+}
+
+function descargarCSV() {
+  if (vacantes.length === 0) {
+    alert("No hay vacantes para exportar");
+    return;
+  }
+
+  let csv = "Nombre,Teléfono,Sucursal,Estado\n";
+  vacantes.forEach(v => {
+    csv += `${v.nombre},${v.telefono},${v.sucursal},${v.estado || "Pendiente"}\n`;
+  });
+
+  let blob = new Blob([csv], { type: "text/csv" });
+  let url = window.URL.createObjectURL(blob);
+  let a = document.createElement("a");
+  a.setAttribute("hidden", "");
+  a.setAttribute("href", url);
+  a.setAttribute("download", "reporte_vacantes.csv");
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+}
+
+mostrarVacantes();
+</script>
+
+</body>
+</html>
